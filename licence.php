@@ -43,12 +43,13 @@
 			$image = str_replace( " ", "_", $image );
 			$islicence = array();
 
-			$url = "http://commons.wikimedia.org/w/api.php?action=query&prop=templates&format=php&tllimit=500&titles=" . urlencode( $image );
-			$raw = file_get_contents( $url );
-			$unserialized = unserialize( $raw );
+			$http = new HTTP();
+			$base = "http://commons.wikimedia.org/w/api.php";
+			$url = $base . "?action=query&prop=templates&format=json&tllimit=500&titles=" . urlencode( $image );
+			$json = json_decode( $http->get( $url ), true );
 			// Array key (pageid) herausfinden
 
-			$pageid = array_keys( $unserialized['query']['pages'] );
+			$page = array_shift( $json['query']['pages'] );
 
 			// NOTE: haven't been able to get the files for these from Luxo yet.
 			// whitelist erstellen (Templates, die sicher keine Lizenzen sind)
@@ -56,7 +57,8 @@
 			// blacklist erstellen (Templates, die sicher Lizenzen sind)
 			$suretemplatelist = array();
 
-			foreach( $unserialized['query']['pages'][$pageid['0']]['templates'] as $tmpl ){
+			$arraytemplates = array();
+			foreach( $page['templates'] as $tmpl ){
 				$template = $tmpl['title']; // easier
 				$arraytemplates[] = $template;
 
@@ -70,13 +72,12 @@
 					// Kategorien prüfen, dann noch Subkategorien auf "licence tags" prüfen.
 
 					// Kats der Vorlage laden.
-					$url = "http://commons.wikimedia.org/w/api.php?action=query&prop=categories&format=php&cllimit=500&titles=" . urlencode( $template );
-					$raw = file_get_contents( $url );
-					$catunserialized = unserialize( $raw );
-					$catid = array_keys( $catunserialized['query']['pages'] );
+					$url = $base . "?action=query&prop=categories&format=json&cllimit=500&titles=" . urlencode( $template );
+					$catjson = json_decode( $http->get( $url ), true );
+					$cat = array_shift( $catjson['query']['pages'] );
 					// Vorlagen durchgehen
-					if( isset( $catunserialized['query']['pages'][$catid['0']]['categories'] ) ){
-						foreach( $catunserialized['query']['pages'][$catid['0']]['categories'] as $katofTemp ){
+					if( isset( $cat['categories'] ) ){
+						foreach( $cat['categories'] as $katofTemp ){
 							if( $katofTemp['title'] == "Category:License tags" ){
 								$islicence[$template] = true;
 							}
@@ -84,14 +85,13 @@
 					}
 
 					// Noch nicht als Lizenz identifiziert. Nun Kategorien der Kategorie durchsuchen.
-					if( $islicence[$template] == false && isset( $catunserialized['query']['pages'][$catid['0']]['categories'] ) ){
-						foreach( $catunserialized['query']['pages'][$catid['0']]['categories'] as $katofTemp ){
-							$url = "http://commons.wikimedia.org/w/api.php?action=query&prop=categories&format=php&cllimit=500&titles=" . urlencode( $katofTemp['title'] );
-							$raw = file_get_contents( $url );
-							$catunserialized2 = unserialize( $raw );
-							$catid = array_keys( $catunserialized2['query']['pages'] );
-							if( $catunserialized2['query']['pages'][$catid['0']]['categories'] ){
-								foreach( $catunserialized2['query']['pages'][$catid['0']]['categories'] as $KatOfKat ){
+					if( $islicence[$template] == false && isset( $cat['categories'] ) ){
+						foreach( $cat['categories'] as $katofTemp ){
+							$url = $base . "?action=query&prop=categories&format=json&cllimit=500&titles=" . urlencode( $katofTemp['title'] );
+							$catjson2 = json_decode( $http->get( $url ), true );
+							$cat2 = array_shift( $catjson2['query']['pages'] );
+							if( isset( $cat2['categories'] ) ){
+								foreach( $cat2['categories'] as $KatOfKat ){
 									if( $KatOfKat['title'] == "Category:License tags" ){
 										$islicence[$template] = true;
 									}
@@ -101,15 +101,14 @@
 					}
 
 					// Noch nicht als Lizenz identifiziert. Nun Kategorien der Unterkategorie durchsuchen.
-					if( $islicence[$template] == false && isset( $catunserialized2['query']['pages'][$catid['0']]['categories'] ) ){
-						foreach( $catunserialized2['query']['pages'][$catid['0']]['categories'] as $katofTemp ){
-							$url = "http://commons.wikimedia.org/w/api.php?action=query&prop=categories&format=php&cllimit=500&titles=" . urlencode( $katofTemp['title'] );
-							$raw = file_get_contents( $url );
-							$catunserialized3 = unserialize( $raw );
-							$catid = array_keys( $catunserialized3['query']['pages'] );
+					if( $islicence[$template] == false && isset( $cat2['categories'] ) ){
+						foreach( $cat2['categories'] as $katofTemp ){
+							$url = $base . "?action=query&prop=categories&format=json&cllimit=500&titles=" . urlencode( $katofTemp['title'] );
+							$catjson3 = json_decode( $http->get( $url ), true );
+							$cat3 = array_shift( $catjson3['query']['pages'] );
 
-							if( $catunserialized3['query']['pages'][$catid['0']]['categories'] ){
-								foreach( $catunserialized3['query']['pages'][$catid['0']]['categories'] as $KatOfKat ){
+							if( isset( $cat3['categories'] ) ){
+								foreach( $cat3['categories'] as $KatOfKat ){
 									if( $KatOfKat['title'] == "Category:License tags" ){
 										$islicence[$template] = true;
 									}

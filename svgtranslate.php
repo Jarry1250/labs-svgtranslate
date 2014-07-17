@@ -42,6 +42,12 @@
 		private $name = null;
 
 		/**
+		 * The description of the SVG file being translated.
+		 * @var string
+		 */
+		private $description = null;
+
+		/**
 		 * The resolved URL of the SVG file being translated.
 		 * @var string
 		 */
@@ -127,7 +133,7 @@
 
 		/**
 		 * Simple constructor function
-		 * @param $name File name
+		 * @param string $name File name
 		 * @global array $pgVerbose From the Peachy API framework
 		 * @global TsIntuition $I18N The I18N object from the Toolserver Intuition section of the I18N
 		 */
@@ -155,7 +161,7 @@
 		 */
 		private function log() {
 			global $I18N;
-			Counter::increment( 'svgtranslate/count_text.txt' );
+			Counter::increment( 'svgtranslate.txt' );
 			$line = "\r\n\"" . $this->name . "\", \"" . $this->targetlanguage . "\", \"{$I18N->getLang()}\", \"" . date( 'c' ) . '"';
 			file_put_contents( 'stats.txt', $line, FILE_APPEND );
 		}
@@ -231,8 +237,8 @@
 
 		/**
 		 * Whether or not the current filename given already exists
-		 * @param string filename Name of the file to query, with or without namespace prefix
-		 * @return void
+		 * @param string $filename Name of the file to query, with or without namespace prefix
+		 * @return bool
 		 */
 		private function file_exists( $filename ) {
 			$site = Peachy::newWiki( null, null, null, 'http://commons.wikimedia.org/w/api.php' );
@@ -242,7 +248,7 @@
 
 		/**
 		 * Extra HTML footer text including statistics and disclaimer.
-		 * @global TsIntuition The I18N object from the Toolserver Intuition section of the I18N
+		 * @global TsIntuition $I18N The I18N object from the Toolserver Intuition section of the I18N
 		 * @return string
 		 */
 		public function get_footer_text() {
@@ -262,14 +268,14 @@
 
 		/**
 		 * Generate a help link on a given theme
-		 * @global string The interface language being used in the Luxo section of the I18N
+		 * @global string $language The interface language being used in the Luxo section of the I18N
 		 * @param string $theme
 		 * @return string
 		 */
 		private function get_help_link( $theme ) {
 			global $language;
 			$url = "http://toolserver.org/~luxo/derivativeFX/help/helpdesk.php?theme=" . $theme . "&lang=" . $language;
-			$html = "<sup><a href='$url' title='help' onclick=\"helpwindow(this.href); return false\" target=\"blank\">?</a></sup>";
+			$html = "<sup><a href='" . $url . "' title='help' onclick=\"helpwindow(this.href); return false\" target=\"blank\">?</a></sup>";
 			return $html;
 		}
 
@@ -322,7 +328,8 @@
 		/**
 		 * Turn the value of a hidden form element encapsulating our SVGtranslate object (i.e. $this)
 		 * back into an object.
-		 * @return string
+		 * @param string $serialised
+		 * @return array
 		 */
 		private function unserialise( $serialised ) {
 			$serialised = stripslashes( $serialised );
@@ -336,7 +343,7 @@
 
 		/**
 		 * Generate HTML output for the first form (select SVG name)
-		 * @global TsIntuition The I18N object from the Toolserver Intuition section of the I18N
+		 * @global TsIntuition $I18N The I18N object from the Toolserver Intuition section of the I18N
 		 * @return string
 		 */
 		private function generate_first_form() {
@@ -361,7 +368,7 @@
 
 		/**
 		 * Generate HTML output for the second form (translations, method, TUSC details)
-		 * @global TsIntuition The I18N object from the Toolserver Intuition section of the I18N
+		 * @global TsIntuition $I18N The I18N object from the Toolserver Intuition section of the I18N
 		 * @return string
 		 */
 		private function generate_second_form() {
@@ -402,7 +409,7 @@
 				$i++;
 			}
 			$html .= '<tr><th align="right">' . _html( 'th-language' ) . _g( 'colon-separator' ) . '</th><td>';
-			$html .= "<select name=\"targetlanguage\" width=\"40\">\n";
+			$html .= "<select name=\"targetlanguage\" style=\"width: 40em\">\n";
 			$langnames = $I18N->getLangNames();
 			$default = $I18N->getLang();
 			foreach( $langnames as $code => $name ){
@@ -543,7 +550,7 @@
 
 		/**
 		 * Generate HTML output for the third form (full dewscription page tweaks, confirm acceptance)
-		 * @global string The interface messagesbeing used in the Luxo section of the I18N
+		 * @global string $lng The interface messages being used in the Luxo section of the I18N
 		 * @return string
 		 */
 		private function generate_fourth_form() {
@@ -673,7 +680,7 @@
 
 		/**
 		 * Perform the direct upload, return output of the upload bot
-		 * @global string The interface messagesbeing used in the Luxo section of the I18N
+		 * @global string $lng The interface messages being used in the Luxo section of the I18N
 		 * @return string
 		 */
 		private function do_direct_upload() {
@@ -777,7 +784,7 @@
 				$this->destination = $request['wpDestFile'];
 				$this->pagetext = $request['pagetext'];
 				if( !isset( $request['accbut'] ) || $request['accbut'] != 'true' ){
-					$trans->error( _( 'error-must-accept' ) );
+					$this->error( _( 'error-must-accept' ) );
 				}
 			} else {
 				if( isset( $request['licence'] ) ){
@@ -828,6 +835,7 @@
 		 * @return string
 		 */
 		public function do_step( $step ) {
+			$output = '';
 			switch( $step ){
 				case 'start':
 					$output = $this->generate_first_form();
@@ -836,7 +844,7 @@
 					$output = $this->generate_second_form();
 					break;
 				case 'attachsvg':
-					$output = $this->attach_svg(); // Will trigger die()
+					$this->attach_svg(); // Will trigger die()
 					break;
 				case 'getdetails':
 					$output = $this->generate_third_form();
