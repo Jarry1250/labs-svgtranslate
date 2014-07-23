@@ -386,10 +386,9 @@
 				$site = Peachy::newWiki( null, null, null, 'http://commons.wikimedia.org/w/api.php' );
 				$image = new Image( $site, $this->name );
 				$ii = $image->imageinfo( 1, 800 );
-				$ii = array_pop( $ii );
-				if( isset( $ii['imageinfo'] ) && isset( $ii['imageinfo'][0]['thumburl'] ) ){
+				if( is_array( $ii ) && isset( $ii[0]['thumburl'] ) ){
 					$html .= '<h3>' . _html( 'preview' ) . '</h3>';
-					$html .= '<p><img src="' . $ii['imageinfo'][0]['thumburl'] . '"/><p>';
+					$html .= '<p><img src="' . $ii[0]['thumburl'] . '"/><p>';
 				}
 			}
 
