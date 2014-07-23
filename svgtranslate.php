@@ -462,7 +462,10 @@
 			if( !isset( $this->name, $this->targetlanguage, $this->originals, $this->translations ) ){
 				$this->error( _( 'error-unexpected' ) . $this->originals . "-" . $this->translations );
 			}
-			$name = substr( $this->name, ( strpos( $this->name, ':' ) + 1 ) ); // Trim namespace
+			$name = $this->name;
+			if( strpos( $this->name, ':' ) !== false ) {
+				$name = substr( $this->name, ( strpos( $this->name, ':' ) + 1 ) ); // Trim namespace
+			}
 			$newfilename = preg_replace( "/[.]([^.]+)$/", "_" . $this->targetlanguage . ".\\1", $name );
 			$finalsvg = $this->generate_svg();
 			header( "Content-Type: image/svg+xml; charset=UTF-8" );
