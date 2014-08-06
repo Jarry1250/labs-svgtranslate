@@ -651,8 +651,6 @@
 		 */
 		private function do_direct_upload() {
 			global $lng;
-			echo "$this->name, $this->targetlanguage, $this->originals,
-			$this->translations, $this->destination, $this->pagetext";
 			if( !isset( $this->name, $this->targetlanguage, $this->originals,
 			$this->translations, $this->destination, $this->pagetext )
 			){
