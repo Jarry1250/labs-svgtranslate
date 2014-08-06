@@ -49,7 +49,7 @@
 	?>
 	<?php
 		if( isset( $_GET['text'] ) ){
-			$url = "http://commons.wikimedia.org/w/api.php?action=parse&format=php&pst&text=" . urlencode( $_GET['text'] );
+			$url = "https://commons.wikimedia.org/w/api.php?action=parse&format=php&pst&text=" . urlencode( $_GET['text'] );
 			$data = unserialize( file_get_contents( $url ) );
 			echo $data['parse']['text']['*']; // return data
 		}

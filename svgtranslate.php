@@ -111,13 +111,7 @@
 		 * The chosen upload username
 		 * @var string
 		 */
-		private $tuscuser = null;
-
-		/**
-		 * The chosen upload password
-		 * @var string
-		 */
-		private $tuscpass = null;
+		private $oauthuser = null;
 
 		/**
 		 * The chosen final page text
@@ -130,6 +124,12 @@
 		 * @var string
 		 */
 		private $tempname = null;
+
+		/**
+		 * Peachy identifier for the site (currently only Commons is supported)
+		 * @var Wiki
+		 */
+		private $site = null;
 
 		/**
 		 * Simple constructor function
@@ -191,8 +191,8 @@
 				if( !$this->file_exists( $this->name ) ){
 					$this->error( _( 'error-notfound' ) );
 				}
-				$site = Peachy::newWiki( null, null, null, 'http://commons.wikimedia.org/w/api.php' );
-				$image = new Image( $site, $this->name );
+
+				$image = new Image( $this->get_site(), $this->name );
 				$url = $image->get_url();
 				if( $url == null ){
 					$this->error( $url . _( 'error-notfound' ) );
@@ -241,8 +241,7 @@
 		 * @return bool
 		 */
 		private function file_exists( $filename ) {
-			$site = Peachy::newWiki( null, null, null, 'http://commons.wikimedia.org/w/api.php' );
-			$image = new Image( $site, $filename );
+			$image = new Image( $this->get_site(), $filename );
 			return $image->get_exists();
 		}
 
@@ -317,26 +316,11 @@
 		 * Generate a handy hidden form element encapsulating our SVGtranslate object (i.e. $this)
 		 * @return string
 		 */
-		private function serialise() {
-			$serialised = serialize( $this );
-			$serialised = str_replace( array( '"', "|" ), array( '&quot;', '&pipe;' ), $serialised );
-			$serialised = addslashes( $serialised );
-			$serialised = str_replace( '\0SVGtranslate\0', '', $serialised );
-			return '<input type="hidden" value="' . $serialised . '" name="cache"/>';
-		}
-
-		/**
-		 * Turn the value of a hidden form element encapsulating our SVGtranslate object (i.e. $this)
-		 * back into an object.
-		 * @param string $serialised
-		 * @return array
-		 */
-		private function unserialise( $serialised ) {
-			$serialised = stripslashes( $serialised );
-			$serialised = str_replace( '&quot;', '"', $serialised );
-			$serialised = preg_replace( '!s:(\d+):"(.*?)";!se', "'s:'.strlen('$2').':\"$2\";'", $serialised );
-			$serialised = unserialize( $serialised );
-			return $serialised;
+		private function cache() {
+			session_start();
+			unset( $this->site );
+			$_SESSION['trans'] = clone $this;
+			session_write_close();
 		}
 
 		/* MAIN METHODS */
@@ -361,8 +345,7 @@
 				) . '</p>';
 			$html .= '<form method="POST">' . _html( 'svginput-label' ) . _g( 'colon-separator' ) . '&nbsp;&nbsp;';
 			$html .= '<input type="text" id="svg" name="svg" value="' . htmlspecialchars( $svg ) . '" required="required" />&nbsp;&nbsp;';
-			$html .= '<input type="submit" value="' . _g( 'form-submit' ) . '"/>&nbsp;<input type="reset" value="' . _html( 'form-reset', 'general' ) . '"/>';
-			$html .= $this->serialise() . '</form>';
+			$html .= '<input type="submit" value="' . _g( 'form-submit' ) . '"/>&nbsp;<input type="reset" value="' . _html( 'form-reset', 'general' ) . '"/>' . '</form>';
 			return $html;
 		}
 
@@ -383,8 +366,7 @@
 			$html = '';
 			// Thumbnail
 			if( $this->wikimedia ){
-				$site = Peachy::newWiki( null, null, null, 'http://commons.wikimedia.org/w/api.php' );
-				$image = new Image( $site, $this->name );
+				$image = new Image( $this->get_site(), $this->name );
 				$ii = $image->imageinfo( 1, 800 );
 				if( is_array( $ii ) && isset( $ii[0]['thumburl'] ) ){
 					$html .= '<h3>' . _html( 'preview' ) . '</h3>';
@@ -423,32 +405,13 @@
 			$html .= '<tr><th>' . _html( 'th-method' ) . '</th><td><input type="radio" id="manual" name="method" value="manual" checked="checked"/>';
 			$html .= _html( 'option-manual' ) . '<br />';
 			if( $this->wikimedia ){
-				$html .= '<input type="radio" name="method" value="tusc" /><a href="http://toolserver.org/~magnus/tusc.php">' . _html( 'option-tusc' ) . '</a>';
+				$html .= '<input type="radio" name="method" value="tusc" /><a href="https://www.mediawiki.org/wiki/Special:MyLanguage/Help:OAuth">' . _html( 'option-oauth' ) . '</a>';
 			}
 			$html .= '</td></tr><tr><td>&nbsp;</td>';
 			$html .= '<td><input type="submit" value="' . _g( 'form-submit' ) . '"/><input type="reset" value="' . _html( 'form-reset', 'general' ) . '"/></td></tr>';
-			if( $this->wikimedia ){
-				$html .= '<tr class="tusc"><th>' . _html( 'th-username' ) . '</th><td><input type="text" name="tuscuser"/></td></tr>';
-				$html .= '<tr class="tusc"><th>' . _html( 'th-password' ) . '</th><td><input type="password" name="tuscpass"/></td></tr>';
-			}
-			$html .= '</table>' . $this->serialise() . '</form>';
+			$html .= '</table>' . '</form>';
+			$this->cache();
 
-			if( $this->wikimedia !== null ){
-				$html .= '<script type="text/javascript">
-						$( document ).ready( function(){
-							$( "input[name*=\'method\']" ).click( function() {
-								if( this.value == "manual" ){
-									$( "tr.tusc" ).css( {"visibility":"hidden"} );
-								} else {
-									$( "tr.tusc" ).css( {"visibility":"visible"} );
-								}
-							} );
-							if( $( "input#manual" ).attr( "checked" ) ) {
-								$( "tr.tusc" ).css( {"visibility":"hidden"} );
-							}
-						} );
-					</script>';
-			}
 			return $html;
 		}
 
@@ -461,10 +424,8 @@
 			if( !isset( $this->name, $this->targetlanguage, $this->originals, $this->translations ) ){
 				$this->error( _( 'error-unexpected' ) . $this->originals . "-" . $this->translations );
 			}
-			$name = $this->name;
-			if( strpos( $this->name, ':' ) !== false ) {
-				$name = substr( $this->name, ( strpos( $this->name, ':' ) + 1 ) ); // Trim namespace
-			}
+
+			$name = preg_replace( '/^[A-Za-z]{0,10}:/', '', $this->name ); // Trim namespace
 			$newfilename = preg_replace( "/[.]([^.]+)$/", "_" . $this->targetlanguage . ".\\1", $name );
 			$finalsvg = $this->generate_svg();
 			header( "Content-Type: image/svg+xml; charset=UTF-8" );
@@ -485,6 +446,9 @@
 			if( !isset( $this->name ) ){
 				$this->error( _( 'error-unexpected' ) );
 			}
+			// Should have authorised in the previous step. Should check though.
+			global $oAuth;
+			$this->oauthuser = $oAuth->authorizeMe();
 
 			$licences = licencehelper::get_licences( $this->name );
 			$possible_licences = $licences['possible'];
@@ -497,7 +461,8 @@
 				$possible_licences[] = "self|" . substr( implode( "|", $original_licences ), 0, -1 );
 			}
 
-			$this->original_description = file_get_contents( "http://commons.wikimedia.org/w/index.php?action=raw&title=" . urlencode( $this->name ) );
+			$image = new Image( $this->get_site(), $this->name );
+			$this->original_description =  $image->get_page()->get_text();
 
 			// Lizenzen auch in dieses Array um auf nächster Seite zu haben
 			$this->original_licences = $original_licences;
@@ -532,8 +497,9 @@
 
 			// loading-mitteilungen bis hier!
 
+			$this->cache();
 			return "<h3>" . _html( 'description-license' ) . "</h3>
-			<form enctype='multipart/form-data' method='post' name='sendform'>" . $lng['x']['descri'] . ":" . $this->get_help_link( "description" ) . " <br />
+			<form enctype='multipart/form-data' method='post' name='sendform' action=\"index.php\">" . $lng['x']['descri'] . ":" . $this->get_help_link( "description" ) . " <br />
 			<font style='font-style: italic;' size='-1'>" . $lng['x']['forpar'] . "</font><br />
 			<textarea cols='70' rows='10' name='description'>" . htmlspecialchars( $outputdescription ) . "</textarea><br />
 			<br />
@@ -546,8 +512,18 @@
 			<hr style=\"width: 50%;\">
 		" . $lng['x']['hincan'] . ".<br />
 			<br />
-			<input value='" . _g( 'form-submit' ) . "' type='submit' />" . $this->serialise()
-			       . "</form>";
+			<input value='" . _g( 'form-submit' ) . "' type='submit' /></form>";
+		}
+
+		/**
+		 * Wrapper for $this->site
+		 * @return \Wiki
+		 */
+		public function get_site() {
+			if( $this->site === null ) {
+				$this->site = Peachy::newWiki( null, null, null, 'https://commons.wikimedia.org/w/api.php' );
+			}
+			return $this->site;
 		}
 
 		/**
@@ -558,33 +534,20 @@
 		private function generate_fourth_form() {
 			global $lng;
 
-			if( !isset( $this->tuscuser, $this->name, $this->licence, $this->categories, $this->original_licences ) ){
+			if( !isset( $this->name, $this->licence, $this->categories, $this->original_licences ) ){
 				$this->error( _( 'error-unexpected' ) );
 			}
 
-			$site = Peachy::newWiki( null, null, null, 'http://commons.wikimedia.org/w/api.php' );
-			$image = new Image( $site, $this->name );
+			$image = new Image( $this->get_site(), $this->name );
 			$imagedata = $image->imageinfo( 999 );
-			$imagedata = array_pop( $imagedata );
-			$imagedata = $imagedata['imageinfo'];
 
 			$author = false;
 			// |Author= auslesen
 			$description = $this->original_description;
-			$start = stripos( $description, "|Author" );
-			$end1 = stripos( $description, "|Permission" );
-			$end2 = stripos( $description, "|Date" );
 			$originaluploadindex = count( $imagedata ) - 1;
 
-			if( ( $end2 - $start ) < ( $end1 - $start ) && $end2 > $start ){
-				$end = $end2;
-			} else {
-				$end = $end1;
-			}
-
-			if( $start && $end ){
-				$author = substr( $description, $start, $end - $start );
-				$author = stripslashes( trim( substr( strstr( $author, "=" ), 1 ) ) );
+			if( preg_match( '/author *= *(.*?)(\| *(permission|date) *=)/is', $description, $matches ) ){
+				$author = trim( $matches[1] );
 			} else {
 				// bekannte lizenzen filtern
 				foreach( $this->original_licences as $licence ){
@@ -626,7 +589,7 @@
 			$pagetext .= "|Source=translated from [[:" . $this->name . "|]]\n";
 			$pagetext .= "|Date=" . date( "Y-m-d", time() ) . " (translation), ";
 			$pagetext .= date( "Y-m-d", strtotime( $imagedata[$originaluploadindex]["timestamp"] ) ) . " (upload to Commons)\n";
-			$pagetext .= "|Author=" . $authorlist . "*derivative work (translation): [[User:" . $this->tuscuser . "|" . $this->tuscuser . "]]\n";
+			$pagetext .= "|Author=" . $authorlist . "*derivative work (translation): [[User:" . $this->oauthuser . "|" . $this->oauthuser . "]]\n";
 			$pagetext .= "|Permission=$creditline\n{{" . $this->licence . "}}\n";
 			$pagetext .= "|other_versions=\n}}\n\n";
 			$pagetext .= "{{Translation possible}}\n\n";
@@ -652,12 +615,12 @@
 			$html = "";
 			if( strpos( $pagetext, mb_strtoupper( _html( 'author-complete' ) ) ) !== false ){
 				$html .= "<div class='error'><h3>" . _html( 'warning', 'general' ) . "</h3>";
-				$html .= '<p>' . $lng['x']['plscom'] . ' <a target="_blank" href="http://commons.wikimedia.org/w/index.php?title=' . urlencode( $this->name ) . '">' . $this->name . '</a>.</p>';
+				$html .= '<p>' . $lng['x']['plscom'] . ' <a target="_blank" href="https://commons.wikimedia.org/w/index.php?title=' . urlencode( $this->name ) . '">' . $this->name . '</a>.</p>';
 				$html .= "</div>";
 			}
 
 			$html .= "<h3>" . _html( 'finalise' ) . "</h3>";
-			$html .= "<form method='post' enctype='multipart/form-data'>";
+			$html .= "<form method=\"post\" enctype=\"multipart/form-data\" action=\"index.php\">";
 			$html .= $lng['x']['destin'];
 			$html .= ': <br /><input type="text" name="wpDestFile" size="50" id="newfilename" value="' . $targetfile . '" required="required"/><br /><br />';
 			$html .= $lng['x']['summar'];
@@ -665,7 +628,7 @@
 			$html .= '<input name="accbut" value="true" id="accbut" type="checkbox"> <label for="accbut">';
 			$html .= $lng['x']['accept'];
 			$html .= '</label><br /><br /><input id="prev" name="previewbutton" value="' . _html( 'preview' ) . '" onclick="preview(\'' . addslashes( htmlspecialchars( $this->tempname ) ) . '\')" type="button" style="display:none;">&nbsp;<input id="hideprev" name="hidepreviewbutton" value="' . _html( 'preview-hide' ) . '" onclick="hideprevx()" type="button" style="display:none;">&nbsp;<input id="startupload" value="' . _g( 'form-submit' ) . '" type="submit" >';
-			$html .= $this->serialise() . '</form>
+			$html .= '</form>
 		
 		<script type="text/javascript">		
 			$( document ).ready( function(){
@@ -674,9 +637,10 @@
 				$( "#accbut" ).click( function() { enableupload(); } );
 				enableupload();
 				validate("newfilename", "checkimg", "' . addslashes( _html( 'error-filename', 'svgtranslate' ) ) . '");
-				validate("pagetext", "checkdesc", "' . addslashes( $lng['x']['plscom'] . ' <a target="_blank" href="http://commons.wikimedia.org/w/index.php?title=' . urlencode( $this->name ) . '">' . $this->name . '</a>' ) . '");
+				validate("pagetext", "checkdesc", "' . addslashes( $lng['x']['plscom'] . ' <a target="_blank" href="https://commons.wikimedia.org/w/index.php?title=' . urlencode( $this->name ) . '">' . $this->name . '</a>' ) . '");
 			} );
 		</script>';
+			$this->cache();
 			return $html;
 		}
 
@@ -687,7 +651,8 @@
 		 */
 		private function do_direct_upload() {
 			global $lng;
-
+			echo "$this->name, $this->targetlanguage, $this->originals,
+			$this->translations, $this->destination, $this->pagetext";
 			if( !isset( $this->name, $this->targetlanguage, $this->originals,
 			$this->translations, $this->destination, $this->pagetext )
 			){
@@ -695,71 +660,54 @@
 			}
 
 			$new_name = $this->destination;
-			$desc = $this->pagetext;
+			$desc = trim( $this->pagetext );
 			$finalsvg = $this->generate_svg();
-			if( $this->file_exists( $new_name ) || !preg_match( '/^(File|Image):(.*)[.]svg$/i', $new_name ) ){
+			if( $this->file_exists( $new_name ) || !preg_match( '/[.]svg$/i', $new_name ) ){
 				$this->error( _( 'error-filename' ) );
 			}
 			if( strpos( $desc, _( 'author-complete' ) ) !== false ){
-				$this->error( $lng['x']['plscom'] . ' <a target="_blank" href="http://commons.wikimedia.org/w/index.php?title=' . urlencode( $this->name ) . '">' . $this->name . '</a>' );
+				$this->error( $lng['x']['plscom'] . ' <a target="_blank" href="https://commons.wikimedia.org/w/index.php?title=' . urlencode( $this->name ) . '">' . $this->name . '</a>' );
 			}
 
 			$output = '';
-			$new_name = substr( $new_name, ( strpos( $new_name, ':' ) + 1 ) ); // Trim namespace
-			$cwd = getcwd();
 			do{
 				$temp_name = tempnam( "/tmp", "svgt_" );
 				$temp = @fopen( $temp_name, "w" );
 			} while( $temp === false );
-			$temp_dir = $temp_name . "-dir";
-			mkdir( $temp_dir );
 
-			$short_file = str_replace( " ", "_", $new_name );
-			$short_file = str_replace( ":", "_", $short_file );
-			$short_file = str_replace( "/", "_", $short_file );
-			$short_file = str_replace( "\\", "_", $short_file );
-			$short_file = str_replace( "'", "", $short_file );
-
-			$newfile = $temp_dir . "/" . $short_file;
-			if( file_put_contents( $newfile, $finalsvg ) === 0 ){
-				rmdir( $temp_dir );
+			if( file_put_contents( $temp_name, $finalsvg ) === 0 ){
 				unlink( $temp_name );
 				$this->error( _( 'error-unexpected' ) );
 			}
 
-			$desc = trim( $desc );
+			global $oAuth;
+			$ch = null;
 
-			$newname = $short_file;
+			// And do upload
+			$res = $oAuth->doApiQuery( array(
+				'action' => 'tokens',
+				'type' => 'edit',
+			), $ch );
 
-			// Create meta file
-			$meta_file = $temp_dir . '/meta.txt';
-			$meta = @fopen( $meta_file, "w" );
-			fwrite( $meta, $newfile . "\n" );
-			fwrite( $meta, $newname . "\n" );
-			fwrite( $meta, $desc );
-			fclose( $meta );
-
-			// Run upload bot
-			$upload_bot = "upload_bot.pl";
-			$command = "/usr/bin/perl {$upload_bot} {$temp_dir}";
-
-			$output .= shell_exec( $command );
-
-			// Cleanup
-			$debug_file = $temp_dir . "/debug.txt";
-			@unlink( $debug_file );
-			unlink( $meta_file );
-			unlink( $newfile );
-			rmdir( $temp_dir );
-			fclose( $temp );
-			unlink( $temp_name );
+			if ( !isset( $res->tokens->edittoken ) ) $this->error( _( 'error-unexpected' ) );
+			$token = $res->tokens->edittoken;
+			$output = $oAuth->doApiQuery( array(
+				'action' => 'upload',
+				'filename' => $new_name,
+				'token' => $token,
+				'file' => "@/$temp_name;type=image/svg+xml",
+				'comment' => 'Upload SVG translation using svgtranslate',
+				'text' => $desc,
+				'ignorewarnings' => 1
+			) );
 
 			// Output
 			$ret = "<h3>" . _html( 'uploading' ) . "</h3>";
-			if( $output == 'RESPONSE-OKAY' ){
-				$temp = '<p>' . _html( 'uploaded', array( 'variables' => array( $newname ) ) ) . '</p>';
-				$ret .= str_replace( $temp, $newname, "<a target='blank' href='http://commons.wikimedia.org/wiki/File:$newname'>$newname</a>" );
-				$ret .= " (<a href=\"http://commons.wikimedia.org/w/index.php?action=edit&title=File:$newname\" target=\"_blank\">" . _html( 'description-edit' ) . '</a>)';
+			if( $output->upload->result == 'Success' ){
+				$new_name = $output->upload->filename;
+				$temp = '<p>' . _html( 'uploaded', array( 'variables' => array( $new_name ) ) ) . '</p>';
+				$ret .= str_replace( $temp, $new_name, "<a target='blank' href='https://commons.wikimedia.org/wiki/File:$new_name'>$new_name</a>" );
+				$ret .= " (<a href=\"https://commons.wikimedia.org/w/index.php?action=edit&title=File:$new_name\" target=\"_blank\">" . _html( 'description-edit' ) . '</a>)';
 				$this->log( $this->name, $this->targetlanguage );
 			} else {
 				$this->error( _( 'error-upload' ) );
@@ -774,13 +722,6 @@
 		 * @return string
 		 */
 		public function handle_post( &$request ) {
-			if( isset ( $request['cache'] ) ){
-				$cache = $this->unserialise( $request['cache'] );
-				foreach( $cache as $k => $v ){
-					$v = str_replace( '&pipe;', '|', $v );
-					$this->$k = !empty( $v ) ? $v : null;
-				}
-			}
 			if( isset( $request['wpDestFile'] ) ){
 				$step = 'upload';
 				$this->destination = $request['wpDestFile'];
@@ -795,21 +736,22 @@
 					$this->licence = $request['licence'];
 				} else {
 					if( isset( $request['method'] ) ){
-						if( $request['method'] == 'manual' ){
-							$step = "attachsvg";
-						} else {
-							if( $request['method'] == 'tusc' ){
-								$step = 'getdetails';
-								$this->tuscuser = $request['tuscuser'];
-								$this->tuscpass = $request['tuscpass'];
-							}
-						}
 						foreach( $request as $key => $value ){
 							if( strpos( $key, "translation" ) === 0 ){
 								$this->translations[intval( substr( $key, 11 ) )] = $value;
 							}
 						}
 						$this->targetlanguage = $request['targetlanguage'];
+						if( $request['method'] == 'tusc' ){
+							global $oAuth;
+							session_start();
+							$_SESSION['trans'] = $this;
+							session_write_close();
+							$this->oauthuser = $oAuth->authorizeMe();
+							$step = 'getdetails';
+						} else {
+							$step = "attachsvg";
+						}
 					} else {
 						if( isset( $request['svg'] ) ){
 							$step = "translating";
@@ -819,12 +761,6 @@
 							$step = "start";
 						}
 					}
-				}
-			}
-
-			if( $step == 'getdetails' || $step == 'upload' ){
-				if( !validateTUSC( $this->tuscuser, $this->tuscpass ) ){
-					$this->error( _( 'error-tusc-failed' ) );
 				}
 			}
 
@@ -865,5 +801,3 @@
 		}
 
 	}
-
-?>

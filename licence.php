@@ -40,14 +40,13 @@
 
 			$output = "";
 			$image = trim( $image );
-			$image = str_replace( " ", "_", $image );
+			$image = 'File:' . preg_replace( '/^[A-Za-z]{0,10}:/', '', $image );
 			$islicence = array();
 
 			$http = new HTTP();
-			$base = "http://commons.wikimedia.org/w/api.php";
+			$base = "https://commons.wikimedia.org/w/api.php";
 			$url = $base . "?action=query&prop=templates&format=json&tllimit=500&titles=" . urlencode( $image );
 			$json = json_decode( $http->get( $url ), true );
-			// Array key (pageid) herausfinden
 
 			$page = array_shift( $json['query']['pages'] );
 
@@ -219,5 +218,3 @@
 			return $licences;
 		}
 	}
-
-?>

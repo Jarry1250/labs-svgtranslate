@@ -28,7 +28,7 @@
 
 	require_once( '/data/project/jarry-common/public_html/peachy/Init.php' );
 	$pgVerbose = array();
-	$site = Peachy::newWiki( null, null, null, 'http://commons.wikimedia.org/w/api.php' );
+	$site = Peachy::newWiki( null, null, null, 'https://commons.wikimedia.org/w/api.php' );
 	$image = new Image( $site, $_GET['image'] );
 	if( $image->get_exists() ){
 		echo "TRUE"; // Does exist
