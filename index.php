@@ -28,10 +28,14 @@
 	ini_set('session.prefix', 'svgtranslate-');
 	ini_set('session.save_handler', 'redis');
 	ini_set('session.save_path', 'tcp://tools-redis:6379');
+
 	require_once( '/data/project/svgtranslate/public_html/svgtranslate.php' );
 	require_once( '/data/project/svgtranslate/OAuthConfig.php' );
 	require_once( '/data/project/jarry-common/public_html/global.php' );
 	require_once( '/data/project/jarry-common/public_html/libs/OAuthHandler.php' );
+
+	global $I18N;
+	$I18N->setDomain( 'svgtranslate' );
 
 	session_start();
 	if( empty( $_REQUEST ) ) session_unset();
