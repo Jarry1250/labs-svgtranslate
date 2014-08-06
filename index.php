@@ -29,6 +29,7 @@
 	ini_set('session.save_handler', 'redis');
 	ini_set('session.save_path', 'tcp://tools-redis:6379');
 	require_once( '/data/project/svgtranslate/public_html/svgtranslate.php' );
+	require_once( '/data/project/svgtranslate/OAuthConfig.php' );
 	require_once( '/data/project/jarry-common/public_html/global.php' );
 	require_once( '/data/project/jarry-common/public_html/libs/OAuthHandler.php' );
 
@@ -36,11 +37,8 @@
 	if( empty( $_REQUEST ) ) session_unset();
 	$trans = isset( $_SESSION['trans'] ) ? $_SESSION['trans'] : new SVGtranslate();
 
-	$details = array(
-		'consumerKey' => '9e6b5dcb8472a59aa037469617a234dd',
-		'consumerSecret' => '3fa742ab258b4be8bb19545d06a2c79e7ac7add7',
-		'apiUrl' => 'https://test.wikipedia.org/w/api.php'
-	);
+	// Details from OAuth
+	global $details;
 	$oAuth = new OAuthHandler( $details );
 
 	if ( isset( $_GET['oauth_verifier'] ) && $_GET['oauth_verifier'] ) {
