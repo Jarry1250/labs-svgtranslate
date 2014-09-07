@@ -23,9 +23,9 @@
 	 * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 	 */
 
-	$language = $_GET['lang'];
+	$language = isset( $_GET['lang'] ) ? $_GET['lang'] : 'en';
 	include( "language.php" );
-	require_once( '/home/jarry/public_html/global.php' );
+	require_once( '/data/project/jarry-common/public_html/global.php' );
 	header( "Content-Type: application/x-javascript" );
 ?>
 
