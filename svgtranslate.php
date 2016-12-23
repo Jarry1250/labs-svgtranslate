@@ -199,8 +199,8 @@
 				}
 				$this->wikimedia = true;
 			} else {
-				if( strpos( $this->name, "http://" ) !== 0 ){
-					$url = 'http://' . $this->name;
+				if( !preg_match( '/^https?/i', $this->name ) ){
+					$url = 'https://' . $this->name;
 				} else {
 					$url = $this->name;
 				}
