@@ -204,6 +204,7 @@
 				} else {
 					$url = $this->name;
 				}
+				$this->name = array_pop( explode( '/', $this->name ) );
 			}
 			$this->url = $url;
 			$in = file_get_contents( $url );
