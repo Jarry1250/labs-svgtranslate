@@ -299,7 +299,7 @@
 				$original = $this->originals[$i];
 				$translation = $this->translations[$i];
 				$tags = implode( '|', $this->get_content_tags() );
-				$file = preg_replace( '/(< *(' . $tags . ')[^>]*> *)' . preg_quote( $original ) . '( *< *\/)/', "$1" . $translation . "$3", $file );
+				$file = preg_replace( '/(< *(' . $tags . ')[^>]*> *)' . preg_quote( $original, '/' ) . '( *< *\/)/', '${1}' . $translation . '${3}', $file );
 			}
 			$file .= ( substr( $file, -1 ) == "\n" ? "" : "\n" );
 			$file .= "<!-- Translated by SVGTranslate 2. If Unicode characters appear oddly, try to change the character being used by your viewer to UTF-8. -->\n";
