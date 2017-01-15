@@ -383,7 +383,7 @@
 			$html .= '</tr>';
 			$i = 0;
 			foreach( $this->originals as $original ){
-				$prefill = preg_match( '/^[0-9\W+]$/', $original ) ? $original : '';
+				$prefill = preg_match( '/^[0-9%.\W-]+$/', $original ) ? $original : '';
 				// Print translations
 				$html .= "\t<tr><td align=\"right\">" .
 				         $original .
