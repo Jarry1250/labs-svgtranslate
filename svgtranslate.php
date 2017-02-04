@@ -1,4 +1,4 @@
-<?
+<?php
 	/**
 	 * SVGTranslate 2 © 2011
 	 * @author Harry Burt <jarry1250@gmail.com>
