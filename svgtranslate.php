@@ -142,6 +142,7 @@
 			$pgVerbose = array(); // Suppress echos from API framework
 			$I18N->setDomain( 'svgtranslate' ); // Set up internationalisation
 			$this->name = $name;
+			$this->site = Peachy::newWiki( null, null, null, 'https://commons.wikimedia.org/w/api.php' );
 		}
 
 		/* HELPER FUNCTIONS */
@@ -192,7 +193,7 @@
 					$this->error( _( 'error-notfound' ) );
 				}
 
-				$image = new Image( $this->get_site(), $this->name );
+				$image = new Image( $this->site, $this->name );
 				$url = $image->get_url();
 				if( $url == null ){
 					$this->error( $url . _( 'error-notfound' ) );
@@ -242,7 +243,7 @@
 		 * @return bool
 		 */
 		private function file_exists( $filename ) {
-			$image = new Image( $this->get_site(), $filename );
+			$image = new Image( $this->site, $filename );
 			return $image->get_exists();
 		}
 
@@ -367,7 +368,7 @@
 			$html = '';
 			// Thumbnail
 			if( $this->wikimedia ){
-				$image = new Image( $this->get_site(), $this->name );
+				$image = new Image( $this->site, $this->name );
 				$ii = $image->imageinfo( 1, 800 );
 				if( is_array( $ii ) && isset( $ii[0]['thumburl'] ) ){
 					$html .= '<h3>' . _html( 'preview' ) . '</h3>';
@@ -462,7 +463,7 @@
 				$possible_licences[] = "self|" . substr( implode( "|", $original_licences ), 0, -1 );
 			}
 
-			$image = new Image( $this->get_site(), $this->name );
+			$image = new Image( $this->site, $this->name );
 			$this->original_description =  $image->get_page()->get_text();
 
 			// Lizenzen auch in dieses Array um auf nächster Seite zu haben
@@ -517,17 +518,6 @@
 		}
 
 		/**
-		 * Wrapper for $this->site
-		 * @return \Wiki
-		 */
-		public function get_site() {
-			if( $this->site === null ) {
-				$this->site = Peachy::newWiki( null, null, null, 'https://commons.wikimedia.org/w/api.php' );
-			}
-			return $this->site;
-		}
-
-		/**
 		 * Generate HTML output for the third form (full dewscription page tweaks, confirm acceptance)
 		 * @global string $lng The interface messages being used in the Luxo section of the I18N
 		 * @return string
@@ -539,7 +529,7 @@
 				$this->error( _( 'error-unexpected' ) );
 			}
 
-			$image = new Image( $this->get_site(), $this->name );
+			$image = new Image( $this->site, $this->name );
 			$imagedata = $image->imageinfo( 999 );
 
 			$author = false;
